@@ -2,83 +2,60 @@
 using System.Drawing.Imaging;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Text.Encodings.Web;
+using System.Text.Json;
 using Decoder = SevenZip.Compression.LZMA.Decoder;
 
 namespace FontExtractor;
 
 public static class FontUnpacker
 {
-    public static void Unpack(string filePath, string outputDirectoryPath, out FontFileInfo fontFileInfo)
+    public static void Unpack(string filePath, string outputDirectoryPath)
     {
-        fontFileInfo = new FontFileInfo();
+        var fontFileInfo = LoadFileInfo(filePath);
         
         var fileName = Path.GetFileNameWithoutExtension(filePath);
         outputDirectoryPath = Path.Combine(outputDirectoryPath, fileName);
         Directory.CreateDirectory(outputDirectoryPath);
 
-        using var reader = new BinaryReader(File.Open(filePath, FileMode.Open));
-
-        var data1 = reader.ReadInt32();
-        var data2 = reader.ReadInt32();
-        var nameLength = reader.ReadInt32();
-        var nameBytes = reader.ReadBytes(nameLength);
-
-        var name2Length = reader.ReadInt32();
-        var name2Bytes = reader.ReadBytes(name2Length);
-
-        var name = Encoding.UTF8.GetString(nameBytes);
-        var name2 = Encoding.UTF8.GetString(name2Bytes);
-
-        fontFileInfo.CharactersCountOffset = reader.BaseStream.Position;
-        var characterCount = reader.ReadInt32();
-        for (var i = 0; i < characterCount; i++)
-        {
-            var unicode = reader.ReadInt32();
-            var ch = Convert.ToChar(unicode);
-            var index = reader.ReadInt32();
-            
-            fontFileInfo.Fonts.Add(new FontInfo
+        var characterFileInfos = fontFileInfo.CharacterInfos
+            .OrderBy(c => c.Index)
+            .Select(c => new CharacterFileInfo
             {
-                Index = index,
-                Character = ch,
-            });
-        }
+                Character = Convert.ToChar(c.Unicode),
+                Index = c.Index
+            })
+            .ToList();
 
-        var data3 = reader.ReadInt32();
-        var fontSize = reader.ReadInt32();
-        var data5 = reader.ReadInt32();
-        var data6 = reader.ReadInt32();
-
-        var unknownBytes = reader.ReadBytes(18);
-        fontFileInfo.StartCharactersOffset = reader.BaseStream.Position;
-        for (int i = 0; i < characterCount; i++)
+        for (var i = 0; i < fontFileInfo.CharacterDataList.Count; i++)
         {
-            var height = reader.ReadByte();
-            var right = reader.ReadByte();
-            var width = reader.ReadByte();
-            var dataSize = reader.ReadInt16();
-
-            var characterData = reader.ReadBytes(dataSize);
-
-            if (height > 0)
+            var characterData = fontFileInfo.CharacterDataList[i];
+            if (characterData.Height > 0)
             {
-                var decompressed = DecompressCharacter(characterData, height, width);
-                decompressed.Save(Path.Combine(outputDirectoryPath, $"Character_{i + 1}.bmp"));
+                var decompressed = DecompressCharacter(characterData.DataBytes, characterData.Height, characterData.Width);
+                decompressed.Save(Path.Combine(outputDirectoryPath, $"{i+1}.bmp"));
             }
 
-            var un1 = reader.ReadBytes(11);
-            var left = reader.ReadByte();
-            var top = reader.ReadByte();
-
-            var fontInfo = fontFileInfo.Fonts.Single(f => f.Index == i + 1);
-            fontInfo.Height = height;
-            fontInfo.Right = right;
-            fontInfo.Width = width;
-            fontInfo.Left = left;
-            fontInfo.Top = top;
+            var characterFileInfo = characterFileInfos.Single(c => c.Index == i+1);
+            characterFileInfo.Height = characterData.Height;
+            characterFileInfo.Width = characterData.Width;
+            characterFileInfo.Right = characterData.Right;
+            characterFileInfo.Left = characterData.Left;
+            characterFileInfo.Top = characterData.Top;
         }
 
-        var data7 = reader.ReadBytes(4);
+        var options = new JsonSerializerOptions
+        {
+            Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
+            WriteIndented = true
+        };
+        
+        var name = Encoding.UTF8.GetString(fontFileInfo.NameBytes);
+        var name2 = Encoding.UTF8.GetString(fontFileInfo.Name2Bytes);
+        
+        var charactersFileContent = JsonSerializer.Serialize(characterFileInfos, options);
+        File.WriteAllText(Path.Combine(outputDirectoryPath, "characters.json"), charactersFileContent);
+        File.WriteAllText(Path.Combine(outputDirectoryPath, $"!{name}_{name2}_{fontFileInfo.FontSize}"), "");
 
         Console.WriteLine("Done!");
     }
@@ -128,15 +105,101 @@ public static class FontUnpacker
         return bitmap;
     }
 
-    public class FontFileInfo
+    public static FontFileInfo LoadFileInfo(string filePath)
     {
-        public long StartCharactersOffset { get; set; }
-        public long CharactersCountOffset { get; set; }
+        using var reader = new BinaryReader(File.Open(filePath, FileMode.Open));
+        
+        var fileInfo = new FontFileInfo();
+        
+        fileInfo.Data1 = reader.ReadInt32();
+        fileInfo.Data2 = reader.ReadInt32();
+        fileInfo.NameLength = reader.ReadInt32();
+        fileInfo.NameBytes = reader.ReadBytes(fileInfo.NameLength);
 
-        public List<FontInfo> Fonts { get; set; } = new();
+        fileInfo.Name2Length = reader.ReadInt32();
+        fileInfo.Name2Bytes = reader.ReadBytes(fileInfo.Name2Length);
+
+        fileInfo.CharactersCount = reader.ReadInt32();
+        for (var i = 0; i < fileInfo.CharactersCount; i++)
+        {
+            fileInfo.CharacterInfos.Add(new CharacterInfo
+            {
+                Unicode = reader.ReadInt32(),
+                Index = reader.ReadInt32()
+            });
+        }
+
+        fileInfo.Data3 = reader.ReadInt32();
+        fileInfo.FontSize = reader.ReadInt32();
+        fileInfo.Data4 = reader.ReadInt32();
+        fileInfo.Data5 = reader.ReadInt32();
+
+        fileInfo.Data6 = reader.ReadBytes(18);
+        for (int i = 0; i < fileInfo.CharactersCount; i++)
+        {
+            CharacterData data = new();
+            
+            data.Height = reader.ReadByte();
+            data.Right = reader.ReadByte();
+            data.Width = reader.ReadByte();
+            data.DataSize = reader.ReadInt16();
+            data.DataBytes = reader.ReadBytes(data.DataSize);
+            data.Data1 = reader.ReadBytes(11);
+            data.Left = reader.ReadByte();
+            data.Top = reader.ReadByte();
+
+            fileInfo.CharacterDataList.Add(data);
+        }
+
+        fileInfo.Data7 = reader.ReadBytes(4);
+
+        return fileInfo;
     }
 
-    public class FontInfo
+    public class FontFileInfo
+    {
+        public int Data1 { get; set; }
+        public int Data2 { get; set; }
+
+        public int NameLength { get; set; }
+        public byte[] NameBytes { get; set; } = null!;
+
+        public int Name2Length { get; set; }
+        public byte[] Name2Bytes { get; set; } = null!;
+
+        public int CharactersCount { get; set; }
+        public List<CharacterInfo> CharacterInfos { get; set; } = new();
+
+        public int Data3 { get; set; }
+        public int FontSize { get; set; }
+        public int Data4 { get; set; }
+        public int Data5 { get; set; }
+
+        public byte[] Data6 { get; set; } = null!;
+
+        public List<CharacterData> CharacterDataList { get; set; } = new();
+        public byte[] Data7 { get; set; } = null!;
+    }
+
+    public class CharacterInfo
+    {
+        public int Unicode { get; set; }
+        public int Index { get; set; }
+    }
+
+    public class CharacterData
+    {
+        public byte Height { get; set; }
+        public byte Right { get; set; }
+        public byte Width { get; set; }
+        public short DataSize { get; set; }
+        public byte[] DataBytes { get; set; } = null!;
+        public byte[] Data1 { get; set; } = null!;
+        public byte Left { get; set; }
+        public byte Top { get; set; }
+    }
+
+    public class CharacterFileInfo
     {
         public int Index { get; set; }
         public char Character { get; set; }
