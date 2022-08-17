@@ -1,5 +1,6 @@
 ﻿// See https://aka.ms/new-console-template for more information
 
+using System.Text;
 using FontExtractor;
 
 if (args.Length < 3)
@@ -18,5 +19,5 @@ else if (args[0] == "pack")
 }
 else
 {
-    Console.Write("first parameter should be pack or unpack");
+    Console.WriteLine("first parameter should be pack or unpack");
 }
