@@ -79,7 +79,6 @@ public static class FontUnpacker
         for (var i = 0; i < fileInfo.CharacterDataList.Count; i++)
         {
             var charData = fileInfo.CharacterDataList[i];
-
             var characterImagePath = Path.Combine(directoryPath, $"{i + 1}.bmp");
             if (File.Exists(characterImagePath))
             {
@@ -90,7 +89,16 @@ public static class FontUnpacker
 
                 charData.DataSize = (short) compressedData.Length;
                 charData.DataBytes = compressedData;
+
+                charData.Height = (byte) bitmap.Height;
+                charData.Width = (byte) bitmap.Width;
             }
+            
+            var updatedInfo = characterFileInfos.Single(c => c.Index == i + 1);
+            charData.Left = updatedInfo.Left;
+            charData.Right = updatedInfo.Right;
+            charData.Top = updatedInfo.Top;
+            charData.SomeNumber = updatedInfo.Number;
         }
 
         foreach (var addedIndex in addedIndices)
@@ -129,6 +137,9 @@ public static class FontUnpacker
                 Top = newChar.Top
             });
         }
+
+        fileInfo.Data2 = fileInfo.CharacterDataList.Count + 1;
+        fileInfo.Data5 = fileInfo.CharacterDataList.Count + 1;
 
         SaveFileInfo(fileInfo, filePath);
 
