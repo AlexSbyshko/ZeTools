@@ -1,5 +1,6 @@
 ﻿// See https://aka.ms/new-console-template for more information
 
+using System.Text;
 using System.Text.Encodings.Web;
 using System.Text.Json;
 using TextExtractor;
@@ -41,7 +42,7 @@ else if (args[0] == "unpack")
 
     foreach (var file in new DirectoryInfo(originalDirectoryPath).EnumerateFiles("*.*"))
     {
-        if (IsLuaFile(file.FullName))
+        if (IsScriptFile(file.FullName, out var isEnglish))
         {
             var text = TextFinder.FindText(file.FullName, out _, out _);
             if (!text.Any())
@@ -62,9 +63,11 @@ else if (args[0] == "unpack")
             };
 
             var translationFileContent = JsonSerializer.Serialize(translationItems, options);
-            
-            var translationFilePath = Path.Combine(translatedDirectoryPath,
-                $"{Path.GetFileNameWithoutExtension(file.Name)}.json");
+
+            var langDir = isEnglish ? "en" : "jp";
+            var translationSubDir = Path.Combine(translatedDirectoryPath, langDir);
+            Directory.CreateDirectory(translationSubDir);
+            var translationFilePath = Path.Combine(translationSubDir, $"{Path.GetFileNameWithoutExtension(file.Name)}.json");
             
             Console.WriteLine($"Extracted {file.Name}");
             File.WriteAllText(translationFilePath, translationFileContent);
@@ -74,18 +77,29 @@ else if (args[0] == "unpack")
     Console.WriteLine("Done!");
 }
 
-bool IsLuaFile(string filePath)
+bool IsScriptFile(string filePath, out bool isEnglish)
 {
-    var luaHeader = new byte[] {0x1B, 0x4C, 0x75, 0x61, 0x51};
-    
+    // var luaHeader = new byte[] {0x1B, 0x4C, 0x75, 0x61, 0x51};
+    //
     using var reader = new BinaryReader(File.Open(filePath, FileMode.Open));
-    foreach (var t in luaHeader)
+    // foreach (var t in luaHeader)
+    // {
+    //     if (reader.ReadByte() != t)
+    //     {
+    //         return false;
+    //     }
+    // }
+    //
+    // return true;
+
+    var startBytes = reader.ReadBytes(128);
+    var text = Encoding.UTF8.GetString(startBytes);
+    if (text.Contains("script\\language"))
     {
-        if (reader.ReadByte() != t)
-        {
-            return false;
-        }
+        isEnglish = text.Contains("_en_us");
+        return true;
     }
 
-    return true;
+    isEnglish = false;
+    return false;
 }
