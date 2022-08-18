@@ -27,7 +27,8 @@ if (args[0] == "pack")
         
         var fileText = File.ReadAllText(file.FullName);
         var translationItems = JsonSerializer.Deserialize<List<TranslationItem>>(fileText)!;
-        var text = translationItems.Select(i => string.IsNullOrEmpty(i.T) ? i.O : i.T).ToList();
+        var text = translationItems
+            .Select(i => string.IsNullOrEmpty(i.T) ? i.O + i.E : i.T + i.E).ToList();
         Console.WriteLine($"replacing {Path.GetFileName(destFile)}");
         TextReplacer.Replace(destFile, text);
     }
@@ -50,11 +51,10 @@ else if (args[0] == "unpack")
                 continue;
             }
             
-            var translationItems = text.Select(i => new TranslationItem
-            {
-                O = i
-            })
-            .ToList();
+            var translationItems = text
+                .Select(i => new TranslationItem { O = i })
+                .Select(PhraseAnalyzer.FillEndingsAndAutoTranslations)
+                .ToList();
             
             var options = new JsonSerializerOptions
             {
@@ -76,6 +76,7 @@ else if (args[0] == "unpack")
     
     Console.WriteLine("Done!");
 }
+
 
 bool IsScriptFile(string filePath, out bool isEnglish)
 {
