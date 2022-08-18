@@ -4,7 +4,7 @@ namespace TextExtractor;
 
 public static class TextFinder
 {
-    private static byte[] Start = {0x00, 0x00, 0x04};
+    private static byte[] Start = {0x00, 0x01, 0x20, 0x00, 0x80, 0x00};
 
     private const byte ContinueFlag = 0x04;
     private const byte StopFlag = 0x00;
@@ -14,15 +14,13 @@ public static class TextFinder
         var data = File.ReadAllBytes(filePath);
         List<string> result = new();
 
-        startTextOffset = FindSequence(data, Start);
+        startTextOffset = FindTextStartOffset(data);
         
         if (startTextOffset == -1)
         {
             remainingBytesOffset = -1;
             return result;
         }
-        
-        startTextOffset += Start.Length;
 
         using var reader = new BinaryReader(new MemoryStream(data));
         reader.BaseStream.Seek(startTextOffset, SeekOrigin.Begin);
@@ -43,11 +41,43 @@ public static class TextFinder
 
         return result;
     }
+
+    private static int FindTextStartOffset(byte[] source)
+    {
+        int start = 0;
+        while (true)
+        {
+            int offset = FindSequence(source, Start, start);
+            if (offset == -1)
+            {
+                return -1;
+            }
+
+            if (source[offset + 2 + Start.Length] != 0x00)
+            {
+                start += 1;
+                continue;
+            }
+            if (source[offset + 2 + Start.Length + 1] != 0x00)
+            {
+                start += 1;
+                continue;
+            }
+
+            if (source[offset + 2 + Start.Length + 2] != 0x04)
+            {
+                start += 1;
+                continue;
+            }
+
+            return offset + Start.Length + 5;
+        }
+    }
     
-    private static int FindSequence(byte[] source, byte[] seq)
+    private static int FindSequence(byte[] source, byte[] seq, int s)
     {
         var start = -1;
-        for (var i = 0; i < source.Length - seq.Length + 1 && start == -1; i++)
+        for (var i = s; i < source.Length - seq.Length + 1 && start == -1; i++)
         {
             var j = 0;
             for (; j < seq.Length && source[i+j] == seq[j]; j++) {}
