@@ -18,7 +18,7 @@ public class PhraseAnalyzer
 
         if (item.O.Contains('_'))
         {
-            item.E = item.O;
+            item.T = item.O;
         }
 
         return item;
