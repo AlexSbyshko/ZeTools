@@ -21,8 +21,8 @@ if (args[0] == "pack")
         var destFile = Path.Combine(originalDirectoryPath, $"{Path.GetFileNameWithoutExtension(file.Name)}.dat");
         if (!File.Exists(destFile))
         {
-            Console.WriteLine($"File {destFile} not found.");
-            return;
+            Console.WriteLine($"File {destFile} not found. Skipping.");
+            continue;
         }
         
         var fileText = File.ReadAllText(file.FullName);
