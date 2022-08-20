@@ -39,11 +39,12 @@ else if (args[0] == "unpack")
 {
     var originalDirectoryPath = args[1];
     var translatedDirectoryPath = args[2];
+    var headerPattern = args.Length > 3 ? args[3] : "script\\language";
     Directory.CreateDirectory(translatedDirectoryPath);
 
     foreach (var file in new DirectoryInfo(originalDirectoryPath).EnumerateFiles("*.*"))
     {
-        if (IsScriptFile(file.FullName, out var isEnglish))
+        if (IsScriptFile(file.FullName, headerPattern, out var isEnglish))
         {
             var text = TextFinder.FindText(file.FullName, out _, out _);
             if (!text.Any())
@@ -78,7 +79,7 @@ else if (args[0] == "unpack")
 }
 
 
-bool IsScriptFile(string filePath, out bool isEnglish)
+bool IsScriptFile(string filePath, string headerPattern, out bool isEnglish)
 {
     // var luaHeader = new byte[] {0x1B, 0x4C, 0x75, 0x61, 0x51};
     //
@@ -95,7 +96,7 @@ bool IsScriptFile(string filePath, out bool isEnglish)
 
     var startBytes = reader.ReadBytes(128);
     var text = Encoding.UTF8.GetString(startBytes);
-    if (text.Contains("script\\language"))
+    if (text.Contains(headerPattern))
     {
         isEnglish = text.Contains("_en_us");
         return true;
