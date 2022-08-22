@@ -6,6 +6,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TextExtractor", "TextExtrac
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FontExtractor", "FontExtractor\FontExtractor.csproj", "{C72752FD-1946-4A25-B718-48DE46BC7C5F}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "StringReplacer", "StringReplacer\StringReplacer.csproj", "{E3815EDF-E173-49B1-80CD-68447715A818}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -24,5 +26,9 @@ Global
 		{C72752FD-1946-4A25-B718-48DE46BC7C5F}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{C72752FD-1946-4A25-B718-48DE46BC7C5F}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{C72752FD-1946-4A25-B718-48DE46BC7C5F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E3815EDF-E173-49B1-80CD-68447715A818}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E3815EDF-E173-49B1-80CD-68447715A818}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E3815EDF-E173-49B1-80CD-68447715A818}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E3815EDF-E173-49B1-80CD-68447715A818}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
