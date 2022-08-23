@@ -14,18 +14,19 @@ var destString = args[2];
 
 var fileBytes = File.ReadAllBytes(filePath);
 var sourceStringBytes = Encoding.UTF8.GetBytes(sourceString);
+var sizeBytes = BitConverter.GetBytes(sourceStringBytes.Length + 1);
+var sourceSequence = sizeBytes.Concat(sourceStringBytes).ToArray();
 
 Console.WriteLine($"Searching string '{sourceString}'...");
-var stringOffset = FindSequence(fileBytes, sourceStringBytes);
-if (stringOffset == -1)
+var sizeOffset = FindSequence(fileBytes, sourceSequence);
+if (sizeOffset == -1)
 {
     Console.WriteLine("String not found.");
     return;
 }
 
 Console.WriteLine($"String found. Replacing with '{destString}'");
-var sizeOffset = stringOffset - 4;
-var endStringOffset = stringOffset + sourceStringBytes.Length;
+var endStringOffset = sizeOffset + 4 + sourceStringBytes.Length;
 
 var beginBytes = fileBytes[..sizeOffset];
 var endBytes = fileBytes[endStringOffset..];
