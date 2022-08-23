@@ -15,7 +15,7 @@ var destString = args[2];
 var fileBytes = File.ReadAllBytes(filePath);
 var sourceStringBytes = Encoding.UTF8.GetBytes(sourceString);
 var sizeBytes = BitConverter.GetBytes(sourceStringBytes.Length + 1);
-var sourceSequence = sizeBytes.Concat(sourceStringBytes).ToArray();
+var sourceSequence = sizeBytes.Concat(sourceStringBytes).Concat(new byte[] { 0x00 }).ToArray();
 
 Console.WriteLine($"Searching string '{sourceString}'...");
 var sizeOffset = FindSequence(fileBytes, sourceSequence);
