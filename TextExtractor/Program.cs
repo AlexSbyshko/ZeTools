@@ -5,7 +5,7 @@ using System.Text.Encodings.Web;
 using System.Text.Json;
 using TextExtractor;
 
-if (args.Length < 3)
+if (args.Length < 1)
 {
     Console.WriteLine("Not enough params.");
     return;
@@ -13,6 +13,12 @@ if (args.Length < 3)
 
 if (args[0] == "pack")
 {
+    if (args.Length < 3)
+    {
+        Console.WriteLine("Not enough params.");
+        return;
+    }
+    
     var translatedDirectoryPath = args[1];
     var originalDirectoryPath = args[2];
 
@@ -37,6 +43,12 @@ if (args[0] == "pack")
 }
 else if (args[0] == "unpack")
 {
+    if (args.Length < 3)
+    {
+        Console.WriteLine("Not enough params.");
+        return;
+    }
+    
     var originalDirectoryPath = args[1];
     var translatedDirectoryPath = args[2];
     var headerPattern = args.Length > 3 ? args[3] : "script\\language";
@@ -76,6 +88,16 @@ else if (args[0] == "unpack")
     }
     
     Console.WriteLine("Done!");
+}
+else if (args[0] == "stats")
+{
+    if (args.Length < 2)
+    {
+        Console.WriteLine("Not enough params.");
+        return;
+    }
+    
+    StatsPrinter.Print(args[1]);
 }
 
 
